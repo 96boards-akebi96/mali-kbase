@@ -84,6 +84,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/log2.h>
+#include <linux/reset.h>
 
 #include <mali_kbase_config.h>
 
@@ -3257,6 +3258,29 @@ static int power_control_init(struct platform_device *pdev)
 		}
 	}
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)) && defined(CONFIG_OF) \
+			&& defined(CONFIG_RESET_CONTROLLER)
+	kbdev->reset = of_reset_control_get(kbdev->dev->of_node, 0);
+	if (IS_ERR_OR_NULL(kbdev->reset)) {
+		err = PTR_ERR(kbdev->reset);
+		kbdev->reset = NULL;
+		if (err == -EPROBE_DEFER) {
+			dev_err(&pdev->dev, "Failed to get reset\n");
+			goto fail;
+		}
+		dev_info(kbdev->dev, "Continuing without Mali reset control\n");
+		/* Allow probe to continue without reset. */
+	} else {
+		err = reset_control_deassert(kbdev->reset);
+		if (err) {
+			dev_err(kbdev->dev,
+				"Failed to deassert reset (%d)\n",
+				err);
+			goto fail;
+		}
+	}
+#endif /* LINUX_VERSION_CODE >= 3, 15, 0 && CONFIG_RESET_CONTROLLER */
+
 #if defined(CONFIG_OF) && defined(CONFIG_PM_OPP)
 	/* Register the OPPs if they are available in device tree */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) \
@@ -3274,6 +3298,13 @@ static int power_control_init(struct platform_device *pdev)
 	return 0;
 
 fail:
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)) && defined(CONFIG_OF) \
+			&& defined(CONFIG_RESET_CONTROLLER)
+	if (kbdev->reset) {
+		reset_control_put(kbdev->reset);
+		kbdev->reset = NULL;
+	}
+#endif /* CONFIG_RESET_CONTROLLER */
 
 if (kbdev->clock != NULL) {
 	clk_put(kbdev->clock);
@@ -3298,6 +3329,15 @@ static void power_control_term(struct kbase_device *kbdev)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	of_free_opp_table(kbdev->dev);
 #endif
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0)) && defined(CONFIG_OF) \
+			&& defined(CONFIG_RESET_CONTROLLER)
+	if (kbdev->reset) {
+		reset_control_assert(kbdev->reset);
+		reset_control_put(kbdev->reset);
+		kbdev->reset = NULL;
+	}
+#endif /* CONFIG_RESET_CONTROLLER */
 
 	if (kbdev->clock) {
 		clk_disable_unprepare(kbdev->clock);

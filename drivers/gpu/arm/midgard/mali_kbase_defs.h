@@ -69,6 +69,7 @@
 #endif /* CONFIG_MALI_DEVFREQ */
 
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/regulator/consumer.h>
 
 #if defined(CONFIG_PM_RUNTIME) || \
@@ -1195,6 +1196,8 @@ struct kbase_mmu_mode const *kbase_mmu_mode_get_aarch64(void);
  *                         power management, cache etc.)
  * @clock:                 Pointer to the input clock resource (having an id of 0),
  *                         referenced by the GPU device node.
+ * @reset:                 Pointer to the reset control resource (having an id of 0),
+ *                         referenced by the GPU device node.
  * @regulator:             Pointer to the struct corresponding to the regulator
  *                         for GPU device
  * @devname:               string containing the name used for GPU device instance,
@@ -1423,6 +1426,9 @@ struct kbase_device {
 	} irqs[3];
 
 	struct clk *clock;
+#ifdef CONFIG_RESET_CONTROLLER
+	struct reset_control *reset;
+#endif
 #ifdef CONFIG_REGULATOR
 	struct regulator *regulator;
 #endif

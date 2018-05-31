@@ -35,6 +35,7 @@ Optional:
 
 - clocks : Phandle to clock for the Mali T-6xx device.
 - clock-names : Shall be "clk_mali".
+- resets : Phandle to reset for the Mali T-6xx/7xx/8xx device.
 - mali-supply : Phandle to regulator for the Mali device. Refer to
 Documentation/devicetree/bindings/regulator/regulator.txt for details.
 - operating-points-v2 : Refer to Documentation/devicetree/bindings/power/opp.txt
