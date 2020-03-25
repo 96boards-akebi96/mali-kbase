@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011-2018 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2019 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -640,8 +640,8 @@ static int kbase_debug_copy_prepare(struct kbase_jd_atom *katom)
 				katom->kctx, user_extres.ext_resource &
 				~BASE_EXT_RES_ACCESS_EXCLUSIVE);
 
-		if (NULL == reg || NULL == reg->gpu_alloc ||
-				(reg->flags & KBASE_REG_FREE)) {
+		if (kbase_is_region_invalid_or_free(reg) ||
+		    reg->gpu_alloc == NULL) {
 			ret = -EINVAL;
 			goto out_unlock;
 		}

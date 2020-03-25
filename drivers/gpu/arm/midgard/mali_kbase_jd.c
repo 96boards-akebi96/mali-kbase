@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2018 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2019 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -282,7 +282,7 @@ static int kbase_jd_pre_external_resources(struct kbase_jd_atom *katom, const st
 				katom->kctx,
 				res->ext_resource & ~BASE_EXT_RES_ACCESS_EXCLUSIVE);
 		/* did we find a matching region object? */
-		if (NULL == reg || (reg->flags & KBASE_REG_FREE)) {
+		if (kbase_is_region_invalid_or_free(reg)) {
 			/* roll back */
 			goto failed_loop;
 		}
