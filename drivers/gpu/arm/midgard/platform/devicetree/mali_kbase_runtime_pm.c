@@ -31,7 +31,7 @@
 static void enable_gpu_power_control(struct kbase_device *kbdev)
 {
 #if defined(CONFIG_REGULATOR)
-	if (WARN_ON_ONCE(kbdev->regulator == NULL))
+	if (kbdev->regulator == NULL)
 		;
 	else if (!regulator_is_enabled(kbdev->regulator))
 		WARN_ON(regulator_enable(kbdev->regulator));
@@ -52,7 +52,7 @@ static void disable_gpu_power_control(struct kbase_device *kbdev)
 	}
 
 #if defined(CONFIG_REGULATOR)
-	if (WARN_ON_ONCE(kbdev->regulator == NULL))
+	if (kbdev->regulator == NULL)
 		;
 	else if (regulator_is_enabled(kbdev->regulator))
 		WARN_ON(regulator_disable(kbdev->regulator));
