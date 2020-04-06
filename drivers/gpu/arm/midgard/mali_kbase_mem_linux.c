@@ -1735,7 +1735,11 @@ KBASE_EXPORT_TEST_API(kbase_cpu_vm_close);
 static int kbase_cpu_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 #else
+# if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0))
 static int kbase_cpu_vm_fault(struct vm_fault *vmf)
+# else
+static vm_fault_t kbase_cpu_vm_fault(struct vm_fault *vmf)
+# endif
 {
 	struct vm_area_struct *vma = vmf->vma;
 #endif
@@ -1767,11 +1771,17 @@ static int kbase_cpu_vm_fault(struct vm_fault *vmf)
 	addr = (pgoff_t)(vmf->address >> PAGE_SHIFT);
 #endif
 	while (i < map->alloc->nents && (addr < vma->vm_end >> PAGE_SHIFT)) {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 20, 0))
 		int ret = vm_insert_pfn(vma, addr << PAGE_SHIFT,
 		    PFN_DOWN(as_phys_addr_t(map->alloc->pages[i])));
 		if (ret < 0 && ret != -EBUSY)
 			goto locked_bad_fault;
-
+#else
+		vm_fault_t ret = vmf_insert_pfn(vma, addr << PAGE_SHIFT,
+				PFN_DOWN(as_phys_addr_t(map->alloc->pages[i])));
+		if (ret != VM_FAULT_NOPAGE)
+			goto locked_bad_fault;
+#endif
 		i++; addr++;
 	}
 
@@ -1884,10 +1894,16 @@ static int kbase_cpu_mmap(struct kbase_context *kctx,
 
 		vma->vm_flags |= VM_PFNMAP;
 		for (i = 0; i < nr_pages; i++) {
-			phys_addr_t phys;
-
-			phys = as_phys_addr_t(page_array[i + start_off]);
+			phys_addr_t phys = as_phys_addr_t(page_array[i + start_off]);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 20, 0))
 			err = vm_insert_pfn(vma, addr, PFN_DOWN(phys));
+#else
+			vm_fault_t ret;
+
+			ret = vmf_insert_pfn(vma, addr, PFN_DOWN(phys));
+			err = (ret == VM_FAULT_NOPAGE) ? 0 :
+			      (ret == VM_FAULT_OOM ? -ENOMEM : -EBUSY);
+#endif
 			if (WARN_ON(err))
 				break;
 
